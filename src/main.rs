@@ -1,5 +1,8 @@
 use std::env;
 use rand::Rng;
+use std::thread;
+use std::time::Duration;
+
 
 use serenity::{
     async_trait,
@@ -8,12 +11,17 @@ use serenity::{
     utils::{MessageBuilder, Colour},
 };
 
+
 struct Handler;
+
 
 #[async_trait]
 impl EventHandler for Handler {
+
+
     async fn message(&self, context: Context, msg: Message) {
-      if msg.author.id.0 == 152858153719955457 {
+        let mut accept_v: bool = false;
+        if msg.author.id.0 == 152858153719955457 {
             if msg.content == "!ping" {
                 let channel = match msg.channel_id.to_channel(&context).await {
                     Ok(channel) => channel,
@@ -65,41 +73,29 @@ impl EventHandler for Handler {
                 }                
             }
 
-            if &msg.content[0..4] == "!rgb" {
+            if &msg.content[0..4] == "!rgb" { // Currenlty unavailable
                match msg.guild_id {
                     Some(x) => {
-                        if x.0 == 759795278269251637 {
-                            println!("759795278269251637 ready | role mentioned: {}", msg.mention_roles[0].0);
+                        if x.0 == 152858221277609984 {
+                           // println!("759795278269251637 ready | role mentioned: {}", msg.mention_roles[0].0);
                             let mention_role = x.roles(&context.http).await.unwrap();
                             let role_for_rgb = mention_role.get(&msg.mention_roles[0]).unwrap();
                             let mut color1: u64 = 0;
-                            let mut rgbcolor = Colour::from_rgb(0, 0 , 0);
-                            let mut rgbcoloru64: u64 = 0;
-                            println!("role_for_rgb = {:?}", role_for_rgb);
                             loop {
-                                //println!("in loop");
                                 if color1 > 16777215 {color1 = 0;}
-                                color1 = color1 + 1;
-                                if color1 % 100000 == 0 { 
-                              
-                                //println!("color1 : {}", color1);
-                                  if let Err(why) = role_for_rgb.edit(&context.http,|mut r|{
-                                   r.colour(color1/50);
-                                 //   println!("Changing color");
-                                   r
-                                }).await
-                                {
+                                color1 = color1 + 49344;
+                                
+                                thread::sleep(Duration::from_secs(2)); 
+                               
+                                if let Err(why) = role_for_rgb.edit(&context.http,|mut r|{
+                                           r.colour(color1/50);
+                                           r
+                                        }).await
+                                    {
                                     println!("Error Edit Colour {}", why);
-                                }
-                              }
+                                    }
                             }
-                            //match x.roles(&context.http) {
-                            //    Some(rolel) => mention_role = rolel.get(msg.mention_roles[0].0),
-                            //    None => println!("match role for !rgb error"),
-                            //}
-                            // role_for_rgb.colour = Colour::from_rgb(15, 150, 20);                        }
                         }
-                        //&x.edit_role( &context.http,msg.mention_roles[0].0 , |r| { r.colour(6573123) } ).await.unwrap();
                     },
                     None => println!("This error, it is not from 759795278269251637"),
                 } 
@@ -116,23 +112,67 @@ impl EventHandler for Handler {
             }
      }
     // PUBLIC COMMANDS
-    
-            if msg.content == "!roll" {
-               
-                let randomgenerate: u8;
-                {
-                let mut rng = rand::thread_rng();
-                randomgenerate = rng.gen_range(0..100); 
-                }
-                let response = MessageBuilder::new()
-                    .push("User ")
-                    .push_bold_safe(&msg.author.name)
-                    .push(" Rolled the number:  ")
-                    .push_bold_safe(randomgenerate)
-                    .build();
+ 
+            if msg.content == "!accept" { // For different actions from users
+               accept_v = true; 
+            
+            }
 
-                if let Err(why) = msg.channel_id.say(&context.http, &response).await {
-                    println!("Error sending message: {:?}", why);
+            if &msg.content[0..5] == "!roll" { // Not ready at full
+              accept_v = false; 
+                let mut randomgenerate: u8;
+                {
+                    let mut rng = rand::thread_rng();
+                    randomgenerate = rng.gen_range(0..100); 
+                }
+               
+                if msg.mentions.len() == 1 {
+                    println!("Mentioned user {}", msg.mentions[0].name);
+                     let response = MessageBuilder::new()
+                        .push("User ")
+                        .push_bold_safe(&msg.author.name)
+                        .push(" Send Duel Request to: ")
+                        .push_bold_line_safe(&msg.mentions[0].name)
+                        .push(" and rolled the number: ")
+                        .push_bold_safe(randomgenerate)
+                        .push(" To accept duel requst, type !accept ")
+                        .build();
+
+                     if let Err(why) = msg.channel_id.say(&context.http, &response).await {
+                        println!("Error sending message: {:?}", why);
+                     }
+                     while accept_v == false {
+                             if accept_v == true {
+                                {
+                                     let mut rng = rand::thread_rng();
+                                     randomgenerate = rng.gen_range(0..100);   
+                                }
+                                let response = MessageBuilder::new()
+                                    .push("User ")
+                                    .push_bold_safe(&msg.author.name)
+                                    .push(" Accept the request and rolled the number :  ")
+                                    .push_bold_safe(randomgenerate)
+                                    .build();
+
+                                if let Err(why) = msg.channel_id.say(&context.http, &response).await {
+                                    println!("Error sending message: {:?}", why);
+                                }
+                 
+                               accept_v = false; 
+                             }
+                      }
+                }
+                else { 
+                    let response = MessageBuilder::new()
+                        .push("User ")
+                        .push_bold_safe(&msg.author.name)
+                        .push(" Rolled the number:  ")
+                        .push_bold_safe(randomgenerate)
+                        .build();
+
+                    if let Err(why) = msg.channel_id.say(&context.http, &response).await {
+                        println!("Error sending message: {:?}", why);
+                    }
                 }
             }
  

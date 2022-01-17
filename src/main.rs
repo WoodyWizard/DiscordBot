@@ -1,7 +1,11 @@
-use std::env;
+use std::env::{self, temp_dir};
 use rand::Rng;
 use std::thread;
 use std::time::Duration;
+use mysql::*;
+use mysql::prelude::*;
+
+
 
 
 use serenity::{
@@ -10,6 +14,13 @@ use serenity::{
     prelude::*,
     utils::{MessageBuilder, Colour},
 };
+
+#[derive(Debug, PartialEq, Eq)]
+struct Words<'a> {
+    word: &'a String,
+    username: &'a String,
+    count: i32,
+}
 
 
 struct Handler;
@@ -21,6 +32,22 @@ impl EventHandler for Handler {
 
     async fn message(&self, context: Context, msg: Message) {
         let mut accept_v: bool = false;
+
+
+        let mut _conn = sql_sett().unwrap();
+
+        let vecinput = vec![Words{word: &msg.content, username: &msg.author.name, count: 0}]; 
+
+        _conn.exec_batch(
+            r"INSERT INTO words (word, username, count)
+            VALUES (:word, :username, :count)",
+            vecinput.iter().map(| p | params! {
+                "word" => &p.word,
+                "username" => &p.username,
+                "count" => p.count,
+            }));
+
+
         if msg.author.id.0 == 152858153719955457 {
             if msg.content == "!ping" {
                 let channel = match msg.channel_id.to_channel(&context).await {
@@ -191,15 +218,31 @@ impl EventHandler for Handler {
 }
     
 
+fn sql_sett() -> Result<PooledConn> {
+
+
+let url = Opts::from_url("mysql://root:root@localhost:3306/my_database")?;
+    
+let pool = mysql::Pool::new(url)?;
+
+let conn = pool.get_conn()?;
+
+return Ok(conn);
+}
+
+
 
 #[tokio::main]
 async fn main() {
-    // Configure the client with your Discord bot token in the environment.
+
+
+// Configure the client with your Discord bot token in the environment.
     let token = "Mzk2NDI3NzYxMDc5ODEyMTA2.WkbAHw.qmGKpRaWN2-GPpJ_NSHrRnn_7F8";
     let mut client =
         Client::builder(&token).event_handler(Handler).await.expect("Err creating client");
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
-        }
+        };
+
 }

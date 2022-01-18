@@ -15,6 +15,8 @@ use serenity::{
     utils::{MessageBuilder, Colour},
 };
 
+mod lib;
+
 #[derive(Debug, PartialEq, Eq)]
 struct Words<'a> {
     word: Box<&'a String>,
@@ -35,16 +37,14 @@ impl EventHandler for Handler {
 
 
         let mut _conn = sql_sett().unwrap();
-
         let vecinput = vec![Words{word: Box::new(&msg.content), username: &msg.author.name, count: 0}]; 
         let mut localword = match *vecinput[0].word {
             i => &*i,
         };
-
-        println!("localword : {} ", localword);
         let end_w = localword.len();
-        println!("end_w : {}", end_w);
 
+
+        
         _conn.exec_batch(
             r"INSERT INTO words (word, username, count)
             VALUES (:word, :username, :count)",
@@ -56,7 +56,7 @@ impl EventHandler for Handler {
 
 
         if msg.author.id.0 == 152858153719955457 {
-            if msg.content == "!ping" {
+            if lib::get_first_word(&msg.content) == "!ping" {
                 let channel = match msg.channel_id.to_channel(&context).await {
                     Ok(channel) => channel,
                     Err(why) => {
@@ -82,18 +82,18 @@ impl EventHandler for Handler {
                     println!("Error sending message: {:?}", why);
                 }
             }
-            if msg.content == "!dnd" {
+            if lib::get_first_word(&msg.content)  == "!dnd" {
                 context.dnd().await;
             }
-            if msg.content == "!online" {
+            if lib::get_first_word(&msg.content)  == "!online" {
                 context.online().await;
             }
-            if msg.content == "!guildid" {
+            if lib::get_first_word(&msg.content)  == "!guildid" {
                 if let Some(ggid) = msg.guild_id {
                     println!("{}", ggid.0);
                 }            
             }
-            if msg.content == "!roleids" {
+            if lib::get_first_word(&msg.content)  == "!roleids" {
                 if let Some(ggid) = msg.guild_id {
                      println!("Role Id's Method Call");
                      let local_hashmap = ggid.roles(&context.http);
@@ -107,7 +107,7 @@ impl EventHandler for Handler {
                 }                
             }
 
-            if &msg.content[0..4] == "!rgb" { // Currenlty unavailable
+            if lib::get_first_word(&msg.content)  == "!rgb" { // Currenlty unavailable
                match msg.guild_id {
                     Some(x) => {
                         if x.0 == 152858221277609984 {
@@ -135,7 +135,7 @@ impl EventHandler for Handler {
                 } 
             }
 
-            if msg.content == "!thisroleid" {
+            if lib::get_first_word(&msg.content)  == "!thisroleid" {
                 let response = MessageBuilder::new()
                     .push("Roleid: ")
                     .push_bold_safe(&msg.mention_roles[0].0)
@@ -147,12 +147,12 @@ impl EventHandler for Handler {
      }
     // PUBLIC COMMANDS
  
-            if msg.content == "!accept" { // For different actions from users
+            if lib::get_first_word(&msg.content)  == "!accept" { // For different actions from users
                accept_v = true; 
             
             }
 
-            if msg.content == "!roll" { // Not ready at full
+            if lib::get_first_word(&msg.content)  == "!roll" { // Not ready at full
               accept_v = false; 
                 let mut randomgenerate: u8;
                 {

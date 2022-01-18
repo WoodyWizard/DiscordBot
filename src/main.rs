@@ -17,7 +17,7 @@ use serenity::{
 
 #[derive(Debug, PartialEq, Eq)]
 struct Words<'a> {
-    word: &'a String,
+    word: Box<&'a String>,
     username: &'a String,
     count: i32,
 }
@@ -36,13 +36,20 @@ impl EventHandler for Handler {
 
         let mut _conn = sql_sett().unwrap();
 
-        let vecinput = vec![Words{word: &msg.content, username: &msg.author.name, count: 0}]; 
+        let vecinput = vec![Words{word: Box::new(&msg.content), username: &msg.author.name, count: 0}]; 
+        let mut localword = match *vecinput[0].word {
+            i => &*i,
+        };
+
+        println!("localword : {} ", localword);
+        let end_w = localword.len();
+        println!("end_w : {}", end_w);
 
         _conn.exec_batch(
             r"INSERT INTO words (word, username, count)
             VALUES (:word, :username, :count)",
             vecinput.iter().map(| p | params! {
-                "word" => &p.word,
+                "word" => &localword[0..end_w],
                 "username" => &p.username,
                 "count" => p.count,
             }));
@@ -145,7 +152,7 @@ impl EventHandler for Handler {
             
             }
 
-            if &msg.content[0..5] == "!roll" { // Not ready at full
+            if msg.content == "!roll" { // Not ready at full
               accept_v = false; 
                 let mut randomgenerate: u8;
                 {

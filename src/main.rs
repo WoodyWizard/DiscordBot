@@ -5,9 +5,6 @@ use std::time::Duration;
 use mysql::*;
 use mysql::prelude::*;
 
-
-
-
 use serenity::{
     async_trait,
     model::{channel::Message, gateway::Ready, guild::GuildStatus, id::{ChannelId, GuildId},},
@@ -16,44 +13,17 @@ use serenity::{
 };
 
 mod lib;
-
-#[derive(Debug, PartialEq, Eq)]
-struct Words<'a> {
-    word: Box<&'a String>,
-    username: &'a String,
-    count: i32,
-}
-
+mod sql;
 
 struct Handler;
 
 
 #[async_trait]
 impl EventHandler for Handler {
-
-
     async fn message(&self, context: Context, msg: Message) {
         let mut accept_v: bool = false;
-
-
-        let mut _conn = sql_sett().unwrap();
-        let vecinput = vec![Words{word: Box::new(&msg.content), username: &msg.author.name, count: 0}]; 
-        let mut localword = match *vecinput[0].word {
-            i => &*i,
-        };
-        let end_w = localword.len();
-
-
         
-        _conn.exec_batch(
-            r"INSERT INTO words (word, username, count)
-            VALUES (:word, :username, :count)",
-            vecinput.iter().map(| p | params! {
-                "word" => &localword[0..end_w],
-                "username" => &p.username,
-                "count" => p.count,
-            }));
-
+        sql::sql_handler(&msg);
 
         if msg.author.id.0 == 152858153719955457 {
             if lib::get_first_word(&msg.content) == "!ping" {
@@ -224,19 +194,6 @@ impl EventHandler for Handler {
     
 }
     
-
-fn sql_sett() -> Result<PooledConn> {
-
-
-let url = Opts::from_url("mysql://root:root@localhost:3306/my_database")?;
-    
-let pool = mysql::Pool::new(url)?;
-
-let conn = pool.get_conn()?;
-
-return Ok(conn);
-}
-
 
 
 #[tokio::main]

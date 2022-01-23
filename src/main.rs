@@ -11,17 +11,21 @@ use serenity::{
     prelude::*,
     utils::{MessageBuilder, Colour},
 };
+use std::cell::RefCell;
+use std::sync::{Arc, Mutex};
 
 mod lib;
 mod sql;
+mod commands;
 
-struct Handler;
+struct Handler {
+commands: commands::CommHandler,
+}
 
 
 #[async_trait]
 impl EventHandler for Handler {
     async fn message(&self, context: Context, msg: Message) {
-        let mut accept_v: bool = false;
         
         sql::sql_handler(&msg);
 
@@ -116,70 +120,10 @@ impl EventHandler for Handler {
             }
      }
     // PUBLIC COMMANDS
- 
-            if lib::get_first_word(&msg.content)  == "!accept" { // For different actions from users
-               accept_v = true; 
-            
-            }
 
-            if lib::get_first_word(&msg.content)  == "!roll" { // Not ready at full
-              accept_v = false; 
-                let mut randomgenerate: u8;
-                {
-                    let mut rng = rand::thread_rng();
-                    randomgenerate = rng.gen_range(0..100); 
-                }
-               
-                if msg.mentions.len() == 1 {
-                    println!("Mentioned user {}", msg.mentions[0].name);
-                     let response = MessageBuilder::new()
-                        .push("User ")
-                        .push_bold_safe(&msg.author.name)
-                        .push(" Send Duel Request to: ")
-                        .push_bold_line_safe(&msg.mentions[0].name)
-                        .push(" and rolled the number: ")
-                        .push_bold_safe(randomgenerate)
-                        .push(" To accept duel requst, type !accept ")
-                        .build();
+        if lib::get_first_word(&msg.content) == "!accept" { self.commands.change_accept(true).await; }
 
-                     if let Err(why) = msg.channel_id.say(&context.http, &response).await {
-                        println!("Error sending message: {:?}", why);
-                     }
-                     while accept_v == false {
-                             if accept_v == true {
-                                {
-                                     let mut rng = rand::thread_rng();
-                                     randomgenerate = rng.gen_range(0..100);   
-                                }
-                                let response = MessageBuilder::new()
-                                    .push("User ")
-                                    .push_bold_safe(&msg.author.name)
-                                    .push(" Accept the request and rolled the number :  ")
-                                    .push_bold_safe(randomgenerate)
-                                    .build();
-
-                                if let Err(why) = msg.channel_id.say(&context.http, &response).await {
-                                    println!("Error sending message: {:?}", why);
-                                }
-                 
-                               accept_v = false; 
-                             }
-                      }
-                }
-                else { 
-                    let response = MessageBuilder::new()
-                        .push("User ")
-                        .push_bold_safe(&msg.author.name)
-                        .push(" Rolled the number:  ")
-                        .push_bold_safe(randomgenerate)
-                        .build();
-
-                    if let Err(why) = msg.channel_id.say(&context.http, &response).await {
-                        println!("Error sending message: {:?}", why);
-                    }
-                }
-            }
- 
+        if lib::get_first_word(&msg.content) == "!roll" { self.commands.roll_function(&context, &msg).await; }
 
 }
 
@@ -199,11 +143,11 @@ impl EventHandler for Handler {
 #[tokio::main]
 async fn main() {
 
-
+let commander = commands::CommHandler::new();
 // Configure the client with your Discord bot token in the environment.
     let token = "Mzk2NDI3NzYxMDc5ODEyMTA2.WkbAHw.qmGKpRaWN2-GPpJ_NSHrRnn_7F8";
     let mut client =
-        Client::builder(&token).event_handler(Handler).await.expect("Err creating client");
+        Client::builder(&token).event_handler(Handler{commands: commander}).await.expect("Err creating client");
 
     if let Err(why) = client.start().await {
         println!("Client error: {:?}", why);
